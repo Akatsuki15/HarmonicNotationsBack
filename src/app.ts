@@ -8,6 +8,7 @@ import morgan from 'morgan'
 import authRouter from '../src/routes/auth.routes'
 import scoreRouter from '../src/routes/score.routes'
 import userRouter from './routes/user.routes'
+import notationRouter from './routes/notation.routes'
 
 const app = express()
 
@@ -34,6 +35,7 @@ app.use(limiter)
 app.use('/api/auth', authRouter)
 app.use('/api/score', scoreRouter)
 app.use('/api/user', userRouter)
+app.use('/api/notation', notationRouter)
 
 app.get('/', (req: Request, res: Response)=>{
     res.send('Bienvenido al backend (api)')

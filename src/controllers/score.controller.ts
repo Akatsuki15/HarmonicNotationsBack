@@ -1,55 +1,68 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { ScoreService } from '../services/score.service';
+import { CustomJwtPayload } from '../utils/CustomJwtPayload';
 
 export class ScoreController {
-    static async create(req: Request, res: Response, next: NextFunction): Promise<void> {
+    static async getById(req: Request, res: Response): Promise<void> {
         try {
-            console.log('File received:', req.file);
-            console.log('Request body:', req.body);
+            const { id } = req.params;
+            const score = await ScoreService.getById(id);
+            res.json(score);
+        } catch (error: any) {
+            res.status(error.message === 'Score not found' ? 404 : 500)
+                .json({ error: error.message });
+        }
+    }
 
-            // Verificar que se haya subido el archivo PDF
+    static async getAll(req: Request, res: Response): Promise<void> {
+        try {
+            const user = req.user as CustomJwtPayload;
+            const scores = await ScoreService.getAllMyScores(user.id.toString());
+            res.json(scores);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    static async create(req: Request, res: Response): Promise<void> {
+        try {
             if (!req.file) {
-                console.log('No PDF file found in request');
-                res.status(400).json({
-                    message: 'PDF file is required'
-                });
+                res.status(400).json({ error: 'PDF file is required' });
                 return;
             }
 
-            const pdfFile = req.file;
-            console.log('PDF file details:', {
-                originalname: pdfFile.originalname,
-                mimetype: pdfFile.mimetype,
-                size: pdfFile.size
-            });
-
-            // Verificar que el archivo sea del tipo correcto
-            if (pdfFile.mimetype !== 'application/pdf') {
-                res.status(400).json({
-                    message: 'File must be in PDF format'
-                });
+            if (!req.user) {
+                res.status(401).json({ error: 'User not authenticated' });
                 return;
             }
 
-            // Obtener el user_id del token (asumiendo que está disponible en req.user)
-            const user_id = (req as any).user.id;
-
-            // Crear el objeto de datos de la partitura
+            const user = req.user as CustomJwtPayload;
             const scoreData = {
                 ...req.body,
-                user_id
+                user_id: user.id.toString()
             };
 
-            // Llamar al servicio para crear la partitura
-            const score = await ScoreService.create(scoreData, pdfFile);
+            const score = await ScoreService.create(scoreData, req.file);
+            res.status(201).json(score);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
 
-            res.status(201).json({
-                message: 'Score created successfully',
-                score
-            });
-        } catch (error) {
-            console.error('Error in create score:', error);
-            next(error);
+    static async update(req: Request, res: Response): Promise<void> {
+        try {
+            if (!req.user) {
+                res.status(401).json({ error: 'User not authenticated' });
+                return;
+            }
+
+            const { id } = req.params;
+            const scoreData = req.body;
+            const score = await ScoreService.update(id, scoreData, req.file);
+            res.json(score);
+        } catch (error: any) {
+            res.status(error.message === 'Score not found' ? 404 : 500)
+                .json({ error: error.message });
         }
     }
 }
